@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Signup() {
   const router = useRouter();
@@ -10,10 +11,12 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("PATIENT");
 
+  const URL = process.env.NEXT_PUBLIC_API_BASE;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/signup", {
+    const res = await fetch(`${URL}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, role }),
@@ -22,8 +25,7 @@ export default function Signup() {
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem("token", data.token);
-      if (data.role === "THERAPIST") router.push("/dashboard");
-      else router.push("/chat");
+      router.push('/login');
     } else {
       alert(data.message || "Signup failed");
     }
@@ -71,6 +73,9 @@ export default function Signup() {
         >
           Sign Up
         </button>
+      <p className="flex justify-center items-center">
+        Already signed up? <Link href="/login" className="ml-1 text-blue-600 hover:underline">Login</Link>
+      </p>
       </form>
     </div>
   );

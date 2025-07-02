@@ -1,0 +1,49 @@
+    generator client {
+        provider = "prisma-client-js"
+    }
+
+    datasource db {
+        provider = "postgresql"
+        url      = env("DATABASE_URL")
+    }
+
+    enum Role {
+        PATIENT
+        THERAPIST
+    }
+
+    enum MessageType {
+        TEXT
+        IMAGE
+        VIDEO
+        FILE
+        EMOJI
+    }
+
+    model User {
+        id                  Int       @id @default(autoincrement())
+        name                String
+        email               String    @unique
+        password            String
+        role                Role
+        assignedTherapistId Int?
+        therapist           User?     @relation("TherapistAssigned", fields: [assignedTherapistId], references: [id])
+        patients            User[]    @relation("TherapistAssigned")
+        sentMessages        Message[] @relation("Sender")
+        receivedMessages    Message[] @relation("Receiver")
+        createdAt           DateTime  @default(now())
+        updatedAt           DateTime  @updatedAt
+    }
+
+    model Message {
+        id         Int         @id @default(autoincrement())
+        content    String?
+        type       MessageType
+        senderId   Int
+        receiverId Int
+        sender     User        @relation("Sender", fields: [senderId], references: [id])
+        receiver   User        @relation("Receiver", fields: [receiverId], references: [id])
+        fileUrl    String?
+        isRead     Boolean     @default(false)
+        createdAt  DateTime    @default(now())
+    }
