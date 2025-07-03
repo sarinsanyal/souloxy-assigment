@@ -30,7 +30,6 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
-  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [receiverId, setReceiverId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
@@ -39,6 +38,7 @@ export default function ChatPage() {
   const [localUser, setLocalUser] = useState<DecodedUser | null>(null);
   const [token, setToken] = useState<string>("");
 
+  // Load token and user info on first render
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -127,6 +127,13 @@ export default function ChatPage() {
     setReceiverId(String(id));
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("receiverId");
+    router.push("/login");
+    toast.success("Logged out successfully");
+  }
+
   return (
     <div className="w-full h-screen bg-gray-100 flex">
       <Toaster />
@@ -147,56 +154,78 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Chat */}
+      {/* Chat Panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 bg-blue-500 text-white font-semibold text-lg">
-          Hello {localUser?.userName}
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${msg.isSender ? "bg-blue-500 text-white ml-auto" : "bg-gray-300 text-black"}`}
+        <div className="p-4 bg-blue-500 text-white font-semibold text-lg flex flex-row justify-between items-center">
+          <div>
+            {receiverId
+              ? `Chat With: ${chatUsers.find((u) => String(u.id) === receiverId)?.name || "Unknown"}`
+              : "Select a user to start chatting"}
+          </div>
+          <div>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded cursor-pointer"
+              onClick={handleLogout}
             >
-              {msg.type === "TEXT" && <p>{msg.content}</p>}
-              {msg.type === "FILE" && (
-                <a
-                  href={msg.fileUrl || "#"}
-                  target="_blank"
-                  className="underline"
-                  rel="noopener noreferrer"
-                >
-                  {msg.fileUrl}
-                </a>
-              )}
-              <div className="text-[10px] opacity-70 text-right mt-1">
-                {new Date(msg.createdAt).toLocaleTimeString()}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
+              Logout
+            </button>
+          </div>
         </div>
 
-        <div className="flex p-4 border-t bg-white">
-          <button className="mx-2 bg-gray-300 text-white px-4 py-2 rounded-full hover:bg-blue-600">
-            Attach
-          </button>
-          <input
-            type="text"
-            className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-          />
-          <button
-            className="ml-2 bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600"
-            onClick={sendMessage}
-          >
-            Send
-          </button>
-        </div>
+        {/* If no user is selected */}
+        {!receiverId ? (
+          <div className="flex-1 flex items-center justify-center bg-gray-50 text-gray-500 text-lg">
+            Please select a user to start chatting.
+          </div>
+        ) : (
+          <>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${msg.isSender ? "bg-blue-500 text-white ml-auto" : "bg-gray-300 text-black"}`}
+                >
+                  {msg.type === "TEXT" && <p>{msg.content}</p>}
+                  {msg.type === "FILE" && (
+                    <a
+                      href={msg.fileUrl || "#"}
+                      target="_blank"
+                      className="underline"
+                      rel="noopener noreferrer"
+                    >
+                      {msg.fileUrl}
+                    </a>
+                  )}
+                  <div className="text-[10px] opacity-70 text-right mt-1">
+                    {new Date(msg.createdAt).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="flex p-4 border-t bg-white">
+              <button className="mx-2 bg-gray-300 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer">
+                Attach
+              </button>
+              <input
+                type="text"
+                className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm"
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <button
+                className="ml-2 bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer"
+                onClick={sendMessage}
+              >
+                Send
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
