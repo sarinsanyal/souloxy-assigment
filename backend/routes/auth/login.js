@@ -1,6 +1,8 @@
 import express from "express";
 import prisma from "../../lib/prisma.js";
 import bcrypt from "bcrypt";
+import jwt from 'jsonwebtoken';
+import { existsSync } from "fs";
 
 const router = express.Router();
 
@@ -21,11 +23,19 @@ router.post('/', async (req, res) => {
             return res.status(401).json({ message: "Wrong Password entered" });
         }
 
-        else {
-            return res.status(200).json({
-                message: `User ${User.name} logged in`
-            })
-        }
+        const token = jwt.sign({
+            userId: User.id,
+            userName: User.name,
+            userEmail: User.email,
+            userRole: User.role,
+        },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+        return res.status(200).json({
+            message: `User ${User.name} logged in`,
+            token 
+        })
 
 
     } catch (err) {

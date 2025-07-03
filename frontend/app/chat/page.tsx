@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 
 interface Message {
   id: number;
@@ -16,7 +17,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const receiverId = typeof window !== "undefined" ? localStorage.getItem("receiverId") : null;
 

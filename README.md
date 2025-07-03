@@ -80,7 +80,7 @@ Write basic unit tests for:
 
  - README File including:
 
- - Tech stack used
+    - Tech stack used
 
     - Setup instructions for local development
 

@@ -6,11 +6,12 @@ import Link from "next/link";
 import { Toaster, toast } from 'sonner';
 
 export default function Login() {
-  const router = useRouter();
+  // const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
   const URL = process.env.NEXT_PUBLIC_API_BASE;
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,12 +25,10 @@ export default function Login() {
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem("token", data.token);
-      console.log("token", data.token);
-      // if (data.role === "THERAPIST") router.push("/dashboard");
-      // else router.push("/chat");
-      alert("Login successfull!")
+      toast.success(data.message);
+      router.push("/chat");
     } else {
-      alert(data.message || "Login failed");
+      toast.error(data.message || "Login failed");
     }
   };
 

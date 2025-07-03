@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {toast, Toaster} from 'sonner'
 import Link from "next/link";
 
 export default function Signup() {
@@ -25,6 +26,7 @@ export default function Signup() {
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem("token", data.token);
+      toast.success(data.message);
       router.push('/login');
     } else {
       alert(data.message || "Signup failed");
@@ -33,6 +35,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4 font-[family-name:var(--font-geist-sans)]">
+      <Toaster />
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded shadow-md w-full max-w-md space-y-6">
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Sign Up</h2>
         <input
