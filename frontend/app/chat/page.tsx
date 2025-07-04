@@ -63,6 +63,7 @@ export default function ChatPage() {
       if (storedReceiverId) setReceiverId(storedReceiverId);
     } catch (err) {
       toast.error("Invalid token");
+      console.log("Something went wrong", err);
       router.push("/login");
     }
   }, []);
