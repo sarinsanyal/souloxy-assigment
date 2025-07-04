@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
-
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { io, Socket } from "socket.io-client"
+
 
 interface Message {
   id: number;
@@ -43,8 +44,8 @@ export default function ChatPage() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
   const [localUser, setLocalUser] = useState<DecodedUser | null>(null);
   const [token, setToken] = useState<string>("");
+  const [showSidebar, setShowSidebar] = useState(false);
 
-  // Load token and user info on first render
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -65,6 +66,40 @@ export default function ChatPage() {
       router.push("/login");
     }
   }, []);
+
+  //socket
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io(API_BASE);
+    }
+
+    const socket = socketRef.current;
+    if (!socket || !localUser) return;
+
+    socket.on("connect", () => {
+      console.log("Connected to socket server");
+      if (localUser) {
+        socket.emit("register", localUser.userId);
+        console.log(`Registered user ${localUser.userId} to socket`);
+      }
+    })
+
+    socket.on("receiveMessage", (msg) => {
+      if (!msg || !msg.content || !msg.createdAt || !msg.senderId) return;
+      if (msg.senderId === localUser?.userId) return;
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, { ...msg, isSender: false }];
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    }
+  }, [localUser]);
 
   useEffect(() => {
     if (token) {
@@ -107,7 +142,15 @@ export default function ChatPage() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !receiverId) return;
+    if (!newMessage.trim() || !receiverId || !localUser) return;
+
+    const message = {
+      content: newMessage,
+      type: "TEXT",
+      receiverId: parseInt(receiverId),
+      senderId: localUser.userId,
+      createdAt: new Date().toISOString(),
+    }
 
     const res = await fetch(`${API_BASE}/api/messages`, {
       method: "POST",
@@ -115,17 +158,22 @@ export default function ChatPage() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        content: newMessage,
-        type: "TEXT",
-        receiverId: parseInt(receiverId),
-      }),
+      body: JSON.stringify(message),
     });
 
-    const sent = await res.json();
-    setMessages((prev) => [...prev, sent]);
-    setNewMessage("");
-    scrollToBottom();
+    if (res.ok) {
+      const resData = await res.json();
+
+      socketRef.current?.emit("sendMessage", resData);
+      setMessages((prev) => [...prev, resData]);
+
+      setNewMessage("");
+      scrollToBottom();
+
+    } else {
+      const data = await res.json();
+      toast.error(data.message);
+    }
   };
 
   const handleSelectUser = (id: number) => {
@@ -144,15 +192,24 @@ export default function ChatPage() {
     <div className="w-full h-screen bg-gray-100 flex">
       <Toaster />
 
-      <div className="w-64 bg-white border-r border-gray-300 p-4">
+      {/* Sidebar: collapsible on mobile */}
+      <div className={`w-64 bg-white border-r border-gray-300 p-4
+        fixed z-20 top-0 left-0 h-full transition-transform duration-300
+        md:static md:translate-x-0
+        ${showSidebar ? "translate-x-0" : "-translate-x-full"}
+      `}
+      >
         <h2 className="text-lg font-semibold mb-4">
-          Your {localUser?.userRole === "PATIENT" ? "Therapist" : "Patients" }
+          Your {localUser?.userRole === "PATIENT" ? "Therapist" : "Patients"}
         </h2>
         <div className="space-y-2">
           {chatUsers.map((user) => (
             <div
               key={user.id}
-              onClick={() => handleSelectUser(user.id)}
+              onClick={() => {
+                handleSelectUser(user.id);
+                setShowSidebar(false);
+              }}
               className={`p-2 rounded cursor-pointer hover:bg-blue-100 border-2 border-gray-500 ${receiverId === String(user.id) ? "bg-blue-200" : ""}`}
             >
               {user.name}
@@ -160,17 +217,27 @@ export default function ChatPage() {
           ))}
         </div>
       </div>
+      {/* Sidebar toggle button*/}
+      <button
+        className="md:hidden fixed top-4 left-4 z-30 bg-gray-500 text-white px-3 py-2 rounded-full shadow"
+        onClick={() => setShowSidebar((v) => !v)}
+        aria-label="Toggle chat user list"
+      >
+        {showSidebar ? "Close" : "Users"}
+      </button>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 bg-blue-500 text-white font-semibold text-lg flex flex-row justify-between items-center">
-          <div>
+        <div className="p-4 bg-blue-500 text-white font-semibold text-lg flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+          <div className="w-full md:w-auto text-center md:text-left">
             {receiverId
               ? `Chat With: ${chatUsers.find((u) => String(u.id) === receiverId)?.name || "Unknown"}`
               : "Select a user to start chatting"}
           </div>
-          <div>
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
             <HoverCard>
-              <HoverCardTrigger className="mr-5 bg-green-700 px-4 py-1 rounded ">Your Profile</HoverCardTrigger>
+              <HoverCardTrigger className="bg-green-700 px-4 py-1 rounded w-full md:w-auto text-center">
+                Your Profile
+              </HoverCardTrigger>
               <HoverCardContent>
                 <div>
                   Hello <b>{localUser?.userName}</b>
@@ -184,7 +251,7 @@ export default function ChatPage() {
               </HoverCardContent>
             </HoverCard>
             <button
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded cursor-pointer"
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded cursor-pointer w-full md:w-auto"
               onClick={handleLogout}
             >
               Logout
@@ -192,7 +259,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* If no user is selected */}
+        {/* No USer selected */}
         {!receiverId ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50 text-gray-500 text-lg">
             Please select a user to start chatting.
@@ -204,9 +271,18 @@ export default function ChatPage() {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${msg.isSender ? "bg-blue-500 text-white ml-auto" : "bg-gray-300 text-black"}`}
+                  className={`max-w-[40%] md:max-w-[20%] px-4 py-2 rounded-lg text-sm break-words ${msg.isSender ? "bg-green-400 text-black ml-auto" : "bg-gray-300 text-black"}`}
                 >
-                  {msg.type === "TEXT" && <p>{msg.content}</p>}
+                  {msg.type === "TEXT" && (
+                    <p
+                      dangerouslySetInnerHTML={{
+                        __html: (msg.content ?? "").replace(
+                          /((https?:\/\/[^\s]+))/g,
+                          '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline text-blue-700 hover:text-blue-900">$1</a>'
+                        ),
+                      }}
+                    />
+                  )}
                   {msg.type === "FILE" && (
                     <a
                       href={msg.fileUrl || "#"}
