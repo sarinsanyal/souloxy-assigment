@@ -5,6 +5,12 @@ import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
 
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+
 interface Message {
   id: number;
   content: string | null;
@@ -138,9 +144,10 @@ export default function ChatPage() {
     <div className="w-full h-screen bg-gray-100 flex">
       <Toaster />
 
-      {/* Sidebar */}
       <div className="w-64 bg-white border-r border-gray-300 p-4">
-        <h2 className="text-lg font-semibold mb-4">Chats</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          Your {localUser?.userRole === "PATIENT" ? "Therapist" : "Patients" }
+        </h2>
         <div className="space-y-2">
           {chatUsers.map((user) => (
             <div
@@ -154,7 +161,6 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Chat Panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="p-4 bg-blue-500 text-white font-semibold text-lg flex flex-row justify-between items-center">
           <div>
@@ -163,6 +169,20 @@ export default function ChatPage() {
               : "Select a user to start chatting"}
           </div>
           <div>
+            <HoverCard>
+              <HoverCardTrigger className="mr-5 bg-green-700 px-4 py-1 rounded ">Your Profile</HoverCardTrigger>
+              <HoverCardContent>
+                <div>
+                  Hello <b>{localUser?.userName}</b>
+                </div>
+                <div>
+                  Your Email: <b>{localUser?.userEmail}</b>
+                </div>
+                <div>
+                  Your Role: <b>{localUser?.userRole}</b>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
             <button
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded cursor-pointer"
               onClick={handleLogout}
@@ -179,7 +199,7 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-            {/* Messages */}
+            {/* User selected */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
               {messages.map((msg) => (
                 <div
@@ -205,7 +225,7 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
+            {/* input message */}
             <div className="flex p-4 border-t bg-white">
               <button className="mx-2 bg-gray-300 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer">
                 Attach
