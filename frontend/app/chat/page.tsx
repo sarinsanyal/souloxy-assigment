@@ -395,7 +395,7 @@ export default function ChatPage() {
                         {msg.fileUrl.split("/").pop() || "Open file"}
                       </a>
 
-                      {/* 👇 Preview handling */}
+                      {/* preview  */}
                       {msg.type === "IMAGE" ? (
                         <img
                           src={msg.fileUrl}

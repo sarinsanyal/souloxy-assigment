@@ -1,98 +1,204 @@
-Hi Sarin,
+# Souloxy Assignment (Therapist-User Messaging System)
 
-Here is your assignment.
-Please let me know when you can complete this. Based on that, I will schedule the next discussion.
+A real-time messaging system between patients and therapists. Built as part of an assignment, it features registration, authentication, therapist-patient assignment, and a live chat system.
 
-### Assignment Title:
-# Therapist-User Messaging System
+---
 
-## Context:
-This assignment is part of a broader Emotional Self-Care platform where users interact with therapists. Your task is to design and implement a secure and scalable messaging system between a user and their assigned therapist.
+## YouTube Video Demo
+The [YouTube link](https://www.youtube.com/watch?v=tjzmpjVUGMU) with a walkthrough has been given. 
 
-## Description:
-Create a secure web application where:
+## Tech Stack
 
-Users can:
- - Sign up and log in to the platform.
+### Frontend
 
- - Access a chat interface to communicate with their assigned therapist.
+* **React.js** – UI Framework
+* **Next.js (App Router)** – SSR & Routing
+* **Tailwind CSS** – Styling
+* **Socket.IO-client** – Real-time communication
+* **Sonner** – Toast notifications
 
- - Send and receive messages in real-time or via asynchronous messaging.
+### Backend
 
- - Exchange various types of content:
+* **Node.js** & **Express.js** – REST API
+* **Prisma ORM** – Database access layer
+* **PostgreSQL** – Relational database
+* **Socket.IO** – Real-time messaging
+* **JWT** – Authentication
+* **bcrypt** – Password hashing
+* **Supertest** + **Node Test Runner** – Testing
 
-    - Text messages
+---
 
-    - Image uploads
+## Local Setup Instructions
 
-    - Video links (e.g., YouTube, Vimeo)
+### Prerequisites
 
-    - File attachments (e.g., PDF, DOCX, PNG)
+* Node.js ≥ 18
+* PostgreSQL installed locally or on a cloud provider (e.g. Supabase or Render)
+* `npm` or `pnpm` installed
 
-    - emoji options
+---
 
-## Must Include:
+### 1. Clone the Repository
 
-### 1. Database Schema (PostgreSQL)
-    Design schema for the following tables:
+```bash
+git clone https://github.com/your-username/souloxy-assignment.git
+cd souloxy-assignment
+```
 
-### 2. Backend (Node.js + Express)
+---
 
-Design the API endpoints
+### 2. Environment Variables
 
-### 3. Frontend (React)
-Implement a clean, user-friendly interface:
+Create the following `.env` files:
 
- - Login & Signup pages
+#### `backend/.env`
 
- - Chat screen to:
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE 
+JWT_SECRET=your_jwt_secret
+PORT=5000
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-    - View conversation history
+#### `frontend/.env.local`
 
-    - Compose and send new messages
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+```
 
-    - Upload files/images
+---
 
-    - Paste or enter video links
+### 3. Install Dependencies
 
-    - Show timestamps and differentiate sender/receiver messages visually
+#### Backend
 
-    - Show read status
+```bash
+cd backend
+npm install
+npx prisma db push
+```
 
-### 4. Authentication
- - Use standard authentication
+#### Frontend
 
- - Protect all messaging routes and UI components from unauthenticated access
+```bash
+cd ../frontend
+npm install
+```
 
-### 5. Unit Tests
-Write basic unit tests for:
+---
 
- - User signup/login
+### 4. Run the App
 
- - Send message API
+#### Backend Server
 
- - Fetch messages API
+```bash
+cd backend
+npm start
+```
+
+#### Prisma DB GUI (Prisma Studio)
+
+```bash
+npx prisma studio
+```
+
+#### Frontend Server
+
+```bash
+cd ../frontend
+npm run dev
+```
 
 
+Frontend: [http://localhost:3000](http://localhost:3000) \
+Backend: [http://localhost:5000](http://localhost:5000) \
+Database: [http://localhost:5555](http://localhost:5555)
 
-## Deliverables:
- - Source Code in a ZIP file or GitHub repository
+---
 
- - README File including:
+## API Overview
 
-    - Tech stack used
+### Auth Routes
 
-    - Setup instructions for local development
+| Method | Endpoint        | Description         |
+| ------ | --------------- | ------------------- |
+| POST   | `/api/register` | Register a new user |
+| POST   | `/api/login`    | Login and get JWT   |
 
-    - API documentation
+### Message Routes
 
-    - How to run tests
+| Method | Endpoint                | Description                |
+| ------ | ----------------------- | -------------------------- |
+| POST   | `/api/messages`         | Send a message             |
+| GET    | `/api/messages/:userId` | Get conversation with user |
+| POST   | `/api/messages/read`    | Mark messages as read      |
 
-    - Any assumptions or known limitations
+### User Routes
 
-- Demo Video (screen recording)
+| Method | Endpoint               | Description                  |
+| ------ | ---------------------- | ---------------------------- |
+| GET    | `/api/users/chat-list` | Get chat contacts for a user |
 
-    - Brief walk-through of login and chat experience
+---
 
-    - Demonstration of sending and receiving messages (including image, video, and file)
+## Running Tests
 
+Only the backend has tests (for now).
+
+```bash
+cd backend
+npm test
+```
+
+This will:
+
+* Register a therapist and patient
+* Log them in
+* Assign a therapist to the patient
+* Send and fetch messages
+
+---
+
+## Assumptions
+
+* Patients must be assigned to a therapist manually or programmatically after registration.
+* Only registered and authenticated users can send or receive messages.
+* Message types currently include text and file URLs.
+* All messages are stored permanently; no auto-delete or soft-delete implemented.
+
+---
+
+## Known Limitations
+
+* No admin dashboard to assign therapists to patients visually.
+* No support for group messaging.
+* No rate limiting or spam protection.
+* File uploads (e.g. image/docs) are assumed to be already hosted and passed via `fileUrl`.
+
+---
+
+## Folder Structure
+
+```
+souloxy-assignment/
+├── backend/         # Node.js + Express + Prisma(Postgres) backend
+│   └── routes/
+│   └── middleware/
+│   └── tests/
+├── frontend/        # Next.js(React) frontend
+│   └── components/
+│   └── app/
+└── README.md
+```
+
+---
+
+## Author
+
+Made with ❤️ by [Sarin Sanyal](https://github.com/sarinsanyal)
+
+---
