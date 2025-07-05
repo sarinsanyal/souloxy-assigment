@@ -331,7 +331,7 @@ export default function ChatPage() {
                   )}
                   {msg.isSender && (
                     <div className="text-[10px] opacity-70 text-right mt-1">
-                      {msg.isRead ? "✓✓ Read" : "✓ Sent"} (Read: {String(msg.isRead)})
+                      {msg.isRead ? "✓✓ Read" : "✓ Sent"} 
                     </div>
                   )}
                   <div className="text-[10px] opacity-70 text-right mt-1">

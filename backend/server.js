@@ -49,11 +49,11 @@ io.on("connection", (socket) => {
     });
 
     socket.on("messagesRead", ({ senderId, readerId }) => {
-    console.log(`Received messagesRead from ${readerId} for sender ${senderId}`);
+    // console.log(`Received messagesRead from ${readerId} for sender ${senderId}`);
     
     const socketId = userSocketMap.get(Number(senderId));
     if (socketId) {
-        console.log(`Found socketId: ${socketId} for sender ${senderId}`);
+        // console.log(`Found socketId: ${socketId} for sender ${senderId}`);
         io.to(socketId).emit("readReceipt", {
             readerId: Number(readerId),
         });
