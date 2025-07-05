@@ -19,6 +19,7 @@ router.post('/', authenticateToken, async (req, res) => {
                 type,
                 senderId,
                 receiverId,
+                isRead: false,
             },
             select: {
                 id: true,
@@ -27,6 +28,7 @@ router.post('/', authenticateToken, async (req, res) => {
                 createdAt: true,
                 senderId: true,
                 receiverId: true,
+                isRead: true,
             }
         });
 
@@ -63,6 +65,7 @@ router.get('/:receiverId', authenticateToken, async (req, res) => {
                 createdAt: true,
                 senderId: true,
                 receiverId: true,
+                isRead: true,
             },
         });
 

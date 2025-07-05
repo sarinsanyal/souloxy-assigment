@@ -13,12 +13,14 @@ import { io, Socket } from "socket.io-client"
 
 
 interface Message {
+  receiverId: any;
   id: number;
   content: string | null;
   type: "TEXT" | "IMAGE" | "VIDEO" | "FILE" | "EMOJI";
   fileUrl?: string | null;
   isSender: boolean;
   createdAt: string;
+  isRead: boolean
 }
 
 interface ChatUser {
@@ -97,6 +99,17 @@ export default function ChatPage() {
       });
     });
 
+    socket.on("readReceipt", ({ readerId }) => {
+      console.log("✅ Read receipt received for readerId:", readerId);
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.isSender && String(msg.receiverId) === String(readerId) && !msg.isRead
+            ? { ...msg, isRead: true }
+            : msg
+        )
+      );
+    });
+
     return () => {
       socket.disconnect();
     }
@@ -117,6 +130,27 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (!receiverId || !token || !localUser) return;
+
+    const markMessagesAsRead = async () => {
+      try {
+        await fetch(`${API_BASE}/api/messages/read/${receiverId}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        socketRef.current?.emit("messagesRead", {
+          senderId: parseInt(receiverId),
+          readerId: localUser?.userId,
+        });
+      } catch (err) {
+        console.log("Error occured: ", err);
+      }
+    };
+
+    markMessagesAsRead();
+  }, [receiverId, messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -193,7 +227,7 @@ export default function ChatPage() {
     <div className="w-full h-screen bg-gray-100 flex">
       <Toaster />
 
-      {/* Sidebar: collapsible on mobile */}
+      {/* Sidebar */}
       <div className={`w-64 bg-white border-r border-gray-300 p-4
         fixed z-20 top-0 left-0 h-full transition-transform duration-300
         md:static md:translate-x-0
@@ -218,7 +252,8 @@ export default function ChatPage() {
           ))}
         </div>
       </div>
-      {/* Sidebar toggle button*/}
+
+      {/* Sidebar toggle */}
       <button
         className="md:hidden fixed top-4 left-4 z-30 bg-gray-500 text-white px-3 py-2 rounded-full shadow"
         onClick={() => setShowSidebar((v) => !v)}
@@ -293,6 +328,11 @@ export default function ChatPage() {
                     >
                       {msg.fileUrl}
                     </a>
+                  )}
+                  {msg.isSender && (
+                    <div className="text-[10px] opacity-70 text-right mt-1">
+                      {msg.isRead ? "✓✓ Read" : "✓ Sent"} (Read: {String(msg.isRead)})
+                    </div>
                   )}
                   <div className="text-[10px] opacity-70 text-right mt-1">
                     {new Date(msg.createdAt).toLocaleTimeString()}
