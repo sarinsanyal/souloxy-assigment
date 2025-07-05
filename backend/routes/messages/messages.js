@@ -5,43 +5,53 @@ import { authenticateToken } from '../../middleware/auth.js';
 const router = express.Router();
 
 router.post('/', authenticateToken, async (req, res) => {
-    const { content, type, receiverId } = req.body;
-    const senderId = req.user.userId;
+  const { content, type, receiverId, fileUrl } = req.body;
+  const senderId = req.user.userId;
 
-    if (!content || !type || !receiverId) {
-        return res.status(400).json({ message: "All fields are required" });
-    }
+  if (!type || !receiverId) {
+    return res.status(400).json({ message: "Type and receiverId are required" });
+  }
 
-    try {
-        const message = await prisma.message.create({
-            data: {
-                content,
-                type,
-                senderId,
-                receiverId,
-                isRead: false,
-            },
-            select: {
-                id: true,
-                content: true,
-                type: true,
-                createdAt: true,
-                senderId: true,
-                receiverId: true,
-                isRead: true,
-            }
-        });
+  if (type === "TEXT" && !content) {
+    return res.status(400).json({ message: "Text content is required" });
+  }
 
-        const formatted = {
-            ...message,
-            isSender: true, 
-        };
+  if (type !== "TEXT" && !fileUrl) {
+    return res.status(400).json({ message: "File URL is required for non-text messages" });
+  }
 
-        return res.status(201).json(formatted);
-    } catch (err) {
-        console.log("Unexpected Error: ", err);
-        return res.status(500).json({ message: "Some unknown error occurred" });
-    }
+  try {
+    const message = await prisma.message.create({
+      data: {
+        content: content || null,
+        type,
+        senderId,
+        receiverId,
+        fileUrl: fileUrl || null,
+        isRead: false,
+      },
+      select: {
+        id: true,
+        content: true,
+        type: true,
+        fileUrl: true,
+        createdAt: true,
+        senderId: true,
+        receiverId: true,
+        isRead: true,
+      },
+    });
+
+    const formatted = {
+      ...message,
+      isSender: true,
+    };
+
+    return res.status(201).json(formatted);
+  } catch (err) {
+    console.log("Unexpected Error: ", err);
+    return res.status(500).json({ message: "Some unknown error occurred" });
+  }
 });
 
 
@@ -61,6 +71,7 @@ router.get('/:receiverId', authenticateToken, async (req, res) => {
             select: {
                 id: true,
                 content: true,
+                fileUrl: true,
                 type: true,
                 createdAt: true,
                 senderId: true,

@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [receiverId, setReceiverId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
   const [localUser, setLocalUser] = useState<DecodedUser | null>(null);
@@ -90,7 +91,7 @@ export default function ChatPage() {
     })
 
     socket.on("receiveMessage", (msg) => {
-      if (!msg || !msg.content || !msg.createdAt || !msg.senderId) return;
+      if (!msg || !msg.createdAt || !msg.senderId) return;
       if (msg.senderId === localUser?.userId) return;
 
       setMessages((prev) => {
@@ -100,7 +101,6 @@ export default function ChatPage() {
     });
 
     socket.on("readReceipt", ({ readerId }) => {
-      console.log("✅ Read receipt received for readerId:", readerId);
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.isSender && String(msg.receiverId) === String(readerId) && !msg.isRead
@@ -128,7 +128,13 @@ export default function ChatPage() {
   }, [receiverId, token]);
 
   useEffect(() => {
-    scrollToBottom();
+    const shouldScroll =
+      messagesEndRef.current &&
+      messagesEndRef.current.getBoundingClientRect().top - window.innerHeight < 200;
+
+    if (shouldScroll) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -222,6 +228,65 @@ export default function ChatPage() {
     router.push("/login");
     toast.success("Logged out successfully");
   }
+
+  const handleFileUploadAndSend = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !receiverId || !localUser) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "useful_preset");
+    formData.append("resource_type", "raw");
+    formData.append("folder", "chat_uploads");
+
+    toast.loading("Uploading file...");
+
+    try {
+      const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/raw/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploaded = await cloudinaryRes.json();
+      const fileUrl = uploaded.secure_url;
+
+      let type: Message["type"] = "FILE";
+      if (file.type.startsWith("image/")) type = "IMAGE";
+      else if (file.type.startsWith("video/")) type = "VIDEO";
+
+      const message = {
+        content: null,
+        type,
+        receiverId: parseInt(receiverId),
+        fileUrl,
+      };
+
+      const res = await fetch(`${API_BASE}/api/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(message),
+      });
+
+      if (res.ok) {
+        const resData = await res.json();
+        socketRef.current?.emit("sendMessage", resData);
+        setMessages((prev) => [...prev, resData]);
+        scrollToBottom();
+        toast.success("File sent");
+      } else {
+        const data = await res.json();
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error("File upload failed");
+      console.error(error);
+    } finally {
+      toast.dismiss();
+    }
+  };
 
   return (
     <div className="w-full h-screen bg-gray-100 flex">
@@ -319,19 +384,36 @@ export default function ChatPage() {
                       }}
                     />
                   )}
-                  {msg.type === "FILE" && (
-                    <a
-                      href={msg.fileUrl || "#"}
-                      target="_blank"
-                      className="underline"
-                      rel="noopener noreferrer"
-                    >
-                      {msg.fileUrl}
-                    </a>
+                  {(msg.type === "FILE" || msg.type === "IMAGE") && msg.fileUrl && (
+                    <div className="flex flex-col gap-1">
+                      <a
+                        href={msg.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline text-blue-700 hover:text-blue-900"
+                      >
+                        {msg.fileUrl.split("/").pop() || "Open file"}
+                      </a>
+
+                      {/* 👇 Preview handling */}
+                      {msg.type === "IMAGE" ? (
+                        <img
+                          src={msg.fileUrl}
+                          alt="Uploaded"
+                          className="max-w-full h-40 object-contain rounded border"
+                        />
+                      ) : msg.fileUrl.endsWith(".pdf") ? (
+                        <iframe
+                          src={msg.fileUrl}
+                          className="w-full h-40 rounded border"
+                          title="PDF Preview"
+                        />
+                      ) : null}
+                    </div>
                   )}
                   {msg.isSender && (
                     <div className="text-[10px] opacity-70 text-right mt-1">
-                      {msg.isRead ? "✓✓ Read" : "✓ Sent"} 
+                      {msg.isRead ? "✓✓ Read" : "✓ Sent"}
                     </div>
                   )}
                   <div className="text-[10px] opacity-70 text-right mt-1">
@@ -344,15 +426,26 @@ export default function ChatPage() {
 
             {/* input message */}
             <div className="flex p-4 border-t bg-white">
-              <button className="mx-2 bg-gray-300 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer">
+              <label className="mx-2 bg-gray-300 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer">
                 Attach
-              </button>
+                <input
+                  type="file"
+                  hidden
+                  onChange={handleFileUploadAndSend}
+                />
+              </label>
               <input
                 type="text"
                 className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm"
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
               />
               <button
                 className="ml-2 bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 cursor-pointer"
