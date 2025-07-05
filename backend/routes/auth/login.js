@@ -33,7 +33,13 @@ router.post('/', async (req, res) => {
         );
         return res.status(200).json({
             message: `User ${User.name} logged in`,
-            token 
+            token,
+            user: {
+                id: User.id,
+                name: User.name,
+                email: User.email,
+                role: User.role
+            }
         })
 
 
